@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdint.h>
+#include <dsound.h>
 
 #define internal static
 #define local_persist static
@@ -35,6 +36,19 @@ win32_window_dimension Win32GetWindowDimension(HWND Window)
     Result.Width = ClientRect.right - ClientRect.left;
 
     return(Result);
+}
+
+typedef HRESULT WINAPI direct_sound_create(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN  pUnkOuter );
+internal void win32InitSound()
+{
+    // Load library
+    HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
+    direct_sound_create *DirectSoundCreate = (direct_sound_create *) GetProcAddress(DSoundLibrary, "DirectSoundCreate");
+    LPDIRECTSOUND directSound = 0;
+    if(SUCCSEEDED(DirectSoundCreate(0, &directSound, 0)))
+    {
+        //
+    }
 }
 
 internal void DrawGradient(win32_offscreen_buffer Buffer, int XOffset, int YOffset)
@@ -139,6 +153,16 @@ LRESULT CALLBACK MainWindowCallback(
             Win32DisplayBufferInWindow(GlobalBackbuffer, DeviceContext, Dim.Width, Dim.Height, X, Y);
             EndPaint(hwnd, &Paint);
         } break;
+
+        case WM_KEYDOWN:
+        case WM_KEYUP:
+        {
+            uint32_t VKCode = wParam;
+            if(VKCode == 'W')
+            {
+                OutputDebugStringA("W pressed");
+            }
+        }
 
         default:
         {
