@@ -38,16 +38,55 @@ win32_window_dimension Win32GetWindowDimension(HWND Window)
     return(Result);
 }
 
-typedef HRESULT WINAPI direct_sound_create(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN  pUnkOuter );
-internal void win32InitSound()
+typedef HRESULT Direct_Sound_Create(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN  pUnkOuter);
+internal void win32InitSound(HWND Window, int bufferSize, int samplesPerSec)
 {
     // Load library
     HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
-    direct_sound_create *DirectSoundCreate = (direct_sound_create *) GetProcAddress(DSoundLibrary, "DirectSoundCreate");
-    LPDIRECTSOUND directSound = 0;
-    if(SUCCSEEDED(DirectSoundCreate(0, &directSound, 0)))
-    {
-        //
+
+    if(DSoundLibrary)
+    {    
+        Direct_Sound_Create *direct_sound_create = (Direct_Sound_Create *)GetProcAddress(DSoundLibrary, "DirectSoundCreate");
+        LPDIRECTSOUND directSound;
+        if(SUCCEEDED(direct_sound_create(0, &directSound, 0)))
+        {
+
+            WAVEFORMATEX pcfxFormat = {};
+            pcfxFormat.wFormatTag = WAVE_FORMAT_PCM;
+            pcfxFormat.nChannels = 2;
+            pcfxFormat.nSamplesPerSec = samplesPerSec;
+            pcfxFormat.wBitsPerSample = 16;
+            pcfxFormat.nBlockAlign = (pcfxFormat.nChannels * pcfxFormat.wBitsPerSample) / 8;
+            pcfxFormat.nAvgBytesPerSec = pcfxFormat.nSamplesPerSec * pcfxFormat.nBlockAlign;
+            pcfxFormat.cbSize = 0;
+
+            if(SUCCEEDED(directSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
+            {
+                DSBUFFERDESC bufferDescription = {};
+                bufferDescription.dwSize = sizeof(bufferDescription);
+                bufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+
+                LPDIRECTSOUNDBUFFER primaryBuffer;
+                if(SUCCEEDED(directSound->CreateSoundBuffer(&bufferDescription, &primaryBuffer, 0)))
+                {
+                    if(SUCCEEDED(primaryBuffer->SetFormat(&pcfxFormat)))
+                    {
+                        //
+                    }
+                }
+            }
+
+            DSBUFFERDESC bufferDescription = {};
+            bufferDescription.dwSize = sizeof(bufferDescription);
+            bufferDescription.dwFlags = 0;
+            bufferDescription.dwBufferBytes = bufferSize;
+            bufferDescription.lpwfxFormat = &pcfxFormat;
+
+            LPDIRECTSOUNDBUFFER secondBuffer;
+            if(SUCCEEDED(directSound->CreateSoundBuffer(&bufferDescription, &secondBuffer, 0)))
+            {
+            }
+        }
     }
 }
 
@@ -209,6 +248,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
 
             int XOffset = 0;
             int YOffset = 0;
+
+            win32InitSound(WindowHandle, 48000, 48000);
 
             while(Running)
             {
