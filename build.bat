@@ -1,6 +1,6 @@
 @echo off
 
 pushd build
-cl -FC -Zi ..\main.cpp user32.lib gdi32.lib
+cl -FC -Zi ..\win32_handmade.cpp user32.lib gdi32.lib
 
 popd
