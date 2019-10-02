@@ -2,7 +2,8 @@
 
 void gameOutputSound(game_sound_output_buffer *soundBuffer)
 {
-    float tSine;
+    // it breaks without static (sound is corrupted)
+    static float tSine;
     int16_t volume = 3000;
     int hz = 256;
     int wavePeriod = soundBuffer->samplesPerSecond / hz;
@@ -36,9 +37,21 @@ void DrawGradient(game_offscreen_buffer *Buffer, int XOffset, int YOffset)
     }
 };
 
-void gameUpdateAndRender(game_offscreen_buffer *Buffer, int XOffset, int YOffset,
-                         game_sound_output_buffer *soundBuffer)
+void gameUpdateAndRender(game_memory *memory,
+                         game_offscreen_buffer *Buffer,
+                         game_sound_output_buffer *soundBuffer
+                        )
 {
+    assert(sizeof(game_state) <= memory->permanentStorageSize);
+    game_state *gameState = (game_state *)memory->permanentStorage;
+    if(!memory->isInitialized)
+    {
+        gameState->hz = 256;
+        gameState->greenOffset = 0;
+        gameState->blueOffset = 0;
+        memory->isInitialized = true;
+    }
+
     gameOutputSound(soundBuffer);
-    DrawGradient(Buffer, XOffset, YOffset);
+    DrawGradient(Buffer, gameState->blueOffset, gameState->greenOffset);
 };

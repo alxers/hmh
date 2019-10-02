@@ -32,6 +32,19 @@ struct win32_window_dimension
     int Height;
 };
 
+struct win32_sound_output
+{
+    int samplesPerSec;
+    int hz;
+    int wavePeriod;
+    int bytesPerSample;
+    uint32_t runningSampleIndex;
+    int secondaryBufferSize;
+    int16_t volume;
+    int latencySampleCount;
+    float tSine;
+};
+
 win32_window_dimension Win32GetWindowDimension(HWND Window)
 {
     win32_window_dimension Result;
@@ -203,19 +216,6 @@ internal void win32InitSound(HWND Window, int32_t samplesPerSec, int32_t bufferS
     }
 }
 
-struct win32_sound_output
-{
-    int samplesPerSec;
-    int hz;
-    int wavePeriod;
-    int bytesPerSample;
-    uint32_t runningSampleIndex;
-    int secondaryBufferSize;
-    int16_t volume;
-    int latencySampleCount;
-    float tSine;
-};
-
 internal void win32FillSoundBuffer(win32_sound_output *soundOutput, DWORD byteToLock,
                                    DWORD bytesToWrite, game_sound_output_buffer *sourceBuffer)
 {
@@ -348,6 +348,17 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
             win32ClearSoundBuffer(&soundOutput);
             globalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
+            int16_t *samples = (int16_t *)VirtualAlloc(0, soundOutput.secondaryBufferSize,
+                                            MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+
+            game_memory gameMemory = {};
+            gameMemory.permanentStorageSize = megabytes(64);
+            gameMemory.permanentStorage = VirtualAlloc(0, gameMemory.permanentStorageSize,
+                                            MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            gameMemory.transientStorageSize = gigabytes((uint64_t)4);
+            gameMemory.transientStorage = VirtualAlloc(0, gameMemory.transientStorageSize,
+                                            MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+
             LARGE_INTEGER beginFreq;
             QueryPerformanceCounter(&beginFreq);
 
@@ -401,13 +412,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
                 screenBuffer.Width = GlobalBackbuffer.Width;
                 screenBuffer.Pitch = GlobalBackbuffer.Pitch;
 
-                int16_t samples[48000 * 2];
                 game_sound_output_buffer soundBuffer = {};
                 soundBuffer.samplesPerSecond = soundOutput.samplesPerSec;
                 soundBuffer.sampleCount = bytesToWrite / soundOutput.bytesPerSample;
                 soundBuffer.samples = samples;
 
-                gameUpdateAndRender(&screenBuffer, XOffset, YOffset, &soundBuffer);
+                gameUpdateAndRender(&gameMemory, &screenBuffer, &soundBuffer);
 
                 HDC DeviceContext = GetDC(WindowHandle);
 
